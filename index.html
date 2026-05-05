@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GPA 计算器（自定义字母规则）</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="app-header__left">
+        <h1 class="app-title">GPA 计算器</h1>
+        <p class="app-subtitle">自定义学校字母成绩规则 · 本地计算与保存</p>
+      </div>
+      <div class="app-header__right">
+        <button class="btn btn--ghost" id="btnOpenRules" type="button">编辑字母→绩点规则</button>
+        <button class="btn btn--ghost" id="btnReset" type="button">清空</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="grid">
+        <section class="card card--result" aria-label="结果">
+          <div class="result">
+            <div class="result__main">
+              <div class="result__label">GPA</div>
+              <div class="result__value" id="gpaValue">—</div>
+              <div class="result__hint" id="gpaHint">添加课程后自动计算</div>
+            </div>
+            <div class="result__stats">
+              <div class="stat">
+                <div class="stat__label">计入学分</div>
+                <div class="stat__value" id="includedCredits">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">加权绩点总和</div>
+                <div class="stat__value" id="qualityPoints">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">不计入课程</div>
+                <div class="stat__value" id="excludedCount">0</div>
+              </div>
+            </div>
+          </div>
+          <div class="result__actions">
+            <label class="field-inline">
+              <span>保留小数</span>
+              <select id="precisionSelect" class="select select--sm">
+                <option value="2" selected>2</option>
+                <option value="3">3</option>
+              </select>
+            </label>
+            <button class="btn btn--primary" id="btnCopy" type="button">复制结果</button>
+          </div>
+        </section>
+
+        <section class="card" aria-label="课程列表">
+          <div class="card__header">
+            <div class="card__title">课程</div>
+            <div class="card__actions">
+              <button class="btn" id="btnAddCourse" type="button">+ 添加课程</button>
+            </div>
+          </div>
+
+          <div class="table-wrap" role="region" aria-label="课程表">
+            <table class="table" id="coursesTable">
+              <thead>
+                <tr>
+                  <th style="width: 34%">课程名</th>
+                  <th style="width: 14%">学分</th>
+                  <th style="width: 18%">字母成绩</th>
+                  <th style="width: 18%">计入 GPA</th>
+                  <th style="width: 16%">操作</th>
+                </tr>
+              </thead>
+              <tbody id="coursesTbody"></tbody>
+            </table>
+          </div>
+
+          <div class="helper" id="validationArea" aria-live="polite"></div>
+        </section>
+
+        <section class="card" aria-label="导入导出">
+          <div class="card__header">
+            <div class="card__title">导入 / 导出</div>
+          </div>
+
+          <div class="io-grid">
+            <div class="io-block">
+              <div class="io-block__title">导出</div>
+              <div class="io-block__actions">
+                <button class="btn" id="btnExportJson" type="button">导出 JSON（含规则）</button>
+                <button class="btn" id="btnExportCsv" type="button">导出 CSV（课程）</button>
+              </div>
+              <div class="muted">JSON 会包含“字母→绩点规则”和所有课程，最适合备份。</div>
+            </div>
+
+            <div class="io-block">
+              <div class="io-block__title">导入</div>
+              <div class="io-block__actions">
+                <label class="btn btn--ghost" for="fileImportJson">导入 JSON（含规则）</label>
+                <input id="fileImportJson" type="file" accept="application/json" hidden />
+
+                <label class="btn btn--ghost" for="fileImportCsv">导入 CSV（课程）</label>
+                <input id="fileImportCsv" type="file" accept=".csv,text/csv" hidden />
+              </div>
+              <div class="muted">
+                CSV 格式：<code>课程名,学分,字母成绩,是否计入</code>（是否计入可填 <code>true/false</code> 或 <code>1/0</code>）。
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <dialog class="dialog" id="rulesDialog" aria-label="规则编辑">
+      <form method="dialog" class="dialog__panel" id="rulesForm">
+        <div class="dialog__header">
+          <div>
+            <div class="dialog__title">字母成绩 → 绩点 规则</div>
+            <div class="dialog__subtitle">按你学校的标准填写。重复字母会自动合并，绩点必须是数字。</div>
+          </div>
+          <button class="icon-btn" type="button" id="btnCloseRules" aria-label="关闭">✕</button>
+        </div>
+
+        <div class="dialog__content">
+          <div class="rules-toolbar">
+            <button class="btn" type="button" id="btnAddRule">+ 添加一条</button>
+            <button class="btn btn--ghost" type="button" id="btnResetDefaultRules">恢复常见 4.0 默认</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table table--compact">
+              <thead>
+                <tr>
+                  <th style="width: 40%">字母</th>
+                  <th style="width: 40%">绩点</th>
+                  <th style="width: 20%">操作</th>
+                </tr>
+              </thead>
+              <tbody id="rulesTbody"></tbody>
+            </table>
+          </div>
+
+          <div class="helper" id="rulesValidationArea" aria-live="polite"></div>
+        </div>
+
+        <div class="dialog__footer">
+          <button class="btn btn--ghost" type="button" id="btnCancelRules">取消</button>
+          <button class="btn btn--primary" type="submit" id="btnSaveRules">保存并应用</button>
+        </div>
+      </form>
+    </dialog>
+
+    <footer class="footer">
+      <div class="muted">
+        数据仅保存在你的浏览器本地（localStorage）。如果你在隐私/无痕模式使用，可能无法保存。
+      </div>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
